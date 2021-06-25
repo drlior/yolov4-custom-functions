@@ -1,3 +1,5 @@
+import math
+
 import cv2
 import random
 import colorsys
@@ -6,12 +8,82 @@ import tensorflow as tf
 import pytesseract
 from core.config import cfg
 import re
+import numpy as np
+
+
+
+def rotate_image(image, angle):
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return result
+
+def compute_skew(src_img):
+
+    if len(src_img.shape) == 3:
+        h, w, _ = src_img.shape
+    elif len(src_img.shape) == 2:
+        h, w = src_img.shape
+    else:
+        print('upsupported image type')
+
+    img = cv2.medianBlur(src_img, 3)
+
+    edges = cv2.Canny(img,  threshold1 = 30,  threshold2 = 100, apertureSize = 3, L2gradient = True)
+    lines = cv2.HoughLinesP(edges, 1, math.pi/180, 30, minLineLength=w / 4.0, maxLineGap=h/4.0)
+    angle = 0.0
+    nlines = lines.size
+
+    #print(nlines)
+    cnt = 0
+    for x1, y1, x2, y2 in lines[0]:
+        ang = np.arctan2(y2 - y1, x2 - x1)
+        #print(ang)
+        if math.fabs(ang) <= 30: # excluding extreme rotations
+            angle += ang
+            cnt += 1
+
+    if cnt == 0:
+        return 0.0
+    return (angle / cnt)*180/math.pi
+
+def deskew(src_img):
+    return rotate_image(src_img, compute_skew(src_img))
 
 # If you don't have tesseract executable in your PATH, include the following:
 # pytesseract.pytesseract.tesseract_cmd = r'<full_path_to_your_tesseract_executable>'
 # Example tesseract_cmd = r'C:\Program Files (x86)\Tesseract-OCR\tesseract'
 
 # function to recognize license plate numbers using Tesseract OCR
+
+#find angle
+def find_angle(preprocessed_sloping_plate):
+    #im2, contours, hierarchy = cv2.findContours(preprocessed_sloping_plate,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(preprocessed_sloping_plate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    #contour with the largest area is possibly the plate
+    max_area = 0
+    max_cnt = None
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if(area > max_area):
+            max_area = area
+            max_cnt = cnt
+
+    min_rect = cv2.minAreaRect(max_cnt)
+    w = int(min_rect[1][0])
+    h = int(min_rect[1][1])
+    angle = min_rect[2]
+    angle = -20
+
+    # (x,y,w,h,angle) = min_rect
+    print(min_rect)
+
+    #rotate
+    M = cv2.getRotationMatrix2D((w/2, h/2), angle, 1.0)
+    rotated_plate = cv2.warpAffine(preprocessed_sloping_plate, M, (w,h))
+    return rotated_plate
+
 def recognize_plate(img, coords):
     # separate coordinates from box
     xmin, ymin, xmax, ymax = coords
@@ -35,11 +107,16 @@ def recognize_plate(img, coords):
     dilation = cv2.dilate(thresh, rect_kern, iterations = 1)
     #cv2.imshow("Dilation", dilation)
     #cv2.waitKey(0)
+
+    #rotation = find_angle(dilation)
+    rotation = deskew(dilation)
+    cv2.imshow("Rotate", rotation)
+    cv2.waitKey(0)
     # find contours of regions of interest within license plate
     try:
-        contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(rotation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     except:
-        ret_img, contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        ret_img, contours, hierarchy = cv2.findContours(rotation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # sort contours left-to-right
     sorted_contours = sorted(contours, key=lambda ctr: cv2.boundingRect(ctr)[0])
     # create copy of gray image
@@ -73,7 +150,7 @@ def recognize_plate(img, coords):
         # perform another blur on character region
         roi = cv2.medianBlur(roi, 5)
         try:
-            text = pytesseract.image_to_string(roi, config='-c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ --psm 8 --oem 3')
+            text = pytesseract.image_to_string(roi, config='-c tessedit_char_whitelist=0123456789- --psm 7 --oem 3')
             # clean tesseract text by removing any unwanted blank spaces
             clean_text = re.sub('[\W_]+', '', text)
             plate_num += clean_text
