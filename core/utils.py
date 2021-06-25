@@ -105,18 +105,24 @@ def recognize_plate(img, coords):
     rect_kern = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
     # apply dilation to make regions more clear
     dilation = cv2.dilate(thresh, rect_kern, iterations = 1)
-    #cv2.imshow("Dilation", dilation)
-    #cv2.waitKey(0)
+    cv2.imshow("Dilation", dilation)
+    cv2.waitKey(0)
 
     #rotation = find_angle(dilation)
     rotation = deskew(dilation)
     cv2.imshow("Rotate", rotation)
     cv2.waitKey(0)
+
+    dilation = cv2.dilate(rotation, rect_kern, iterations=1)
+
+    # cv2.imshow("Dilation2", dilation)
+    # cv2.waitKey(0)
+
     # find contours of regions of interest within license plate
     try:
-        contours, hierarchy = cv2.findContours(rotation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     except:
-        ret_img, contours, hierarchy = cv2.findContours(rotation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        ret_img, contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # sort contours left-to-right
     sorted_contours = sorted(contours, key=lambda ctr: cv2.boundingRect(ctr)[0])
     # create copy of gray image
@@ -150,7 +156,7 @@ def recognize_plate(img, coords):
         # perform another blur on character region
         roi = cv2.medianBlur(roi, 5)
         try:
-            text = pytesseract.image_to_string(roi, config='-c tessedit_char_whitelist=0123456789- --psm 7 --oem 3')
+            text = pytesseract.image_to_string(roi, config='-c tessedit_char_whitelist=0123456789- --psm 8 --oem 3')
             # clean tesseract text by removing any unwanted blank spaces
             clean_text = re.sub('[\W_]+', '', text)
             plate_num += clean_text
