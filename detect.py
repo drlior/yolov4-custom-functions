@@ -123,9 +123,10 @@ def main(_argv):
                 pass
             crop_objects(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB), pred_bbox, crop_path, allowed_classes)
 
+        result = ""
         # if ocr flag is enabled, perform general text extraction using Tesseract OCR on object detection bounding box
         if FLAGS.ocr:
-            ocr(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB), pred_bbox)
+            result = ocr(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB), pred_bbox)
 
         # if count flag is enabled, perform counting of objects
         if FLAGS.count:
@@ -134,15 +135,20 @@ def main(_argv):
             # loop through dict and print
             for key, value in counted_classes.items():
                 print("Number of {}s: {}".format(key, value))
-            image = utils.draw_bbox(original_image, pred_bbox, FLAGS.info, counted_classes, allowed_classes=allowed_classes, read_plate = FLAGS.plate)
+            #image = utils.draw_bbox(original_image, pred_bbox, FLAGS.info, counted_classes, allowed_classes=allowed_classes, read_plate = FLAGS.plate)
+            image = utils.draw_bbox(original_image, pred_bbox, result, counted_classes,
+                                    allowed_classes=allowed_classes, read_plate=result)
         else:
-            image = utils.draw_bbox(original_image, pred_bbox, FLAGS.info, allowed_classes=allowed_classes, read_plate = FLAGS.plate)
+
+            #image = utils.draw_bbox(original_image, pred_bbox, FLAGS.info, allowed_classes=allowed_classes, read_plate = FLAGS.plate)
+            image = utils.draw_bbox(original_image, pred_bbox, result, allowed_classes=allowed_classes, read_plate =result)
         
         image = Image.fromarray(image.astype(np.uint8))
         if not FLAGS.dont_show:
             image.show()
         image = cv2.cvtColor(np.array(image), cv2.COLOR_BGR2RGB)
-        cv2.imwrite(FLAGS.output + 'detection' + str(count) + '.png', image)
+        #cv2.imwrite(FLAGS.output + 'detection' + str(count) + '.png', image)
+        cv2.imwrite(result + 'detection' + str(count) + '.png', image)
 
 if __name__ == '__main__':
     try:

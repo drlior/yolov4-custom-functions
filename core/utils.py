@@ -322,6 +322,7 @@ def draw_bbox(image, bboxes, info = False, counted_classes = None, show_label=Tr
             if read_plate:
                 height_ratio = int(image_h / 25)
                 plate_number = recognize_plate(image, coor)
+                # plate_number = ocr(image, coor)
                 if plate_number != None:
                     cv2.putText(image, plate_number, (int(coor[0]), int(coor[1]-height_ratio)), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1.25, (255,255,0), 2)

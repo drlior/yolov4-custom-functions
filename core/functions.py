@@ -86,7 +86,7 @@ def ocr(img, data):
         # run tesseract and convert image text to string
         try:
             text = pytesseract.image_to_string(blur, config='-c tessedit_char_whitelist=0123456789 --psm 8 --oem 3')
-            print("Class: {}, Text Extracted: {}".format(class_name, text))
+            # print("Class: {}, Text Extracted: {}".format(class_name, text))
             dirty_license_plate = "%s%s" % (dirty_license_plate, text)
 
             for character in dirty_license_plate:
