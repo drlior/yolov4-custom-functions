@@ -296,7 +296,18 @@ def format_boxes(bboxes, image_height, image_width):
         box[0], box[1], box[2], box[3] = xmin, ymin, xmax, ymax
     return bboxes
 
-def draw_bbox(image, bboxes, info = False, counted_classes = None, show_label=True, allowed_classes=list(read_class_names(cfg.YOLO.CLASSES).values()), read_plate = False):
+def draw_bbox(image, bboxes, info = False, counted_classes = None, show_label=True, allowed_classes=list(read_class_names(cfg.YOLO.CLASSES).values()), read_plate = False, override_plate=""):
+    """
+
+    @param image:
+    @param bboxes:
+    @param info:
+    @param counted_classes:
+    @param show_label:
+    @param allowed_classes:
+    @param read_plate:
+    @return:
+    """
     classes = read_class_names(cfg.YOLO.CLASSES)
     num_classes = len(classes)
     image_h, image_w, _ = image.shape
@@ -326,7 +337,11 @@ def draw_bbox(image, bboxes, info = False, counted_classes = None, show_label=Tr
                 if plate_number != None:
                     cv2.putText(image, plate_number, (int(coor[0]), int(coor[1]-height_ratio)), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1.25, (255,255,0), 2)
-
+            else:
+                height_ratio = int(image_h / 25)
+                plate_number = override_plate
+                cv2.putText(image, plate_number, (int(coor[0]), int(coor[1] - height_ratio)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.25, (255, 255, 0), 2)
             bbox_color = colors[class_ind]
             bbox_thick = int(0.6 * (image_h + image_w) / 600)
             c1, c2 = (coor[0], coor[1]), (coor[2], coor[3])
