@@ -48,8 +48,10 @@ def compute_skew(src_img):
     return (angle / cnt)*180/math.pi
 
 def deskew(src_img):
-    return rotate_image(src_img, compute_skew(src_img))
-
+    try:
+        return rotate_image(src_img, compute_skew(src_img))
+    except:
+        return src_img
 # If you don't have tesseract executable in your PATH, include the following:
 # pytesseract.pytesseract.tesseract_cmd = r'<full_path_to_your_tesseract_executable>'
 # Example tesseract_cmd = r'C:\Program Files (x86)\Tesseract-OCR\tesseract'
@@ -105,13 +107,13 @@ def recognize_plate(img, coords):
     rect_kern = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
     # apply dilation to make regions more clear
     dilation = cv2.dilate(thresh, rect_kern, iterations = 1)
-    cv2.imshow("Dilation", dilation)
-    cv2.waitKey(0)
+    #cv2.imshow("Dilation", dilation)
+    #cv2.waitKey(0)
 
     #rotation = find_angle(dilation)
     rotation = deskew(dilation)
-    cv2.imshow("Rotate", rotation)
-    cv2.waitKey(0)
+    #cv2.imshow("Rotate", rotation)
+    #cv2.waitKey(0)
 
     dilation = cv2.dilate(rotation, rect_kern, iterations=1)
 
